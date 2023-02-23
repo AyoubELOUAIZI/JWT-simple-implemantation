@@ -1,70 +1,73 @@
-const express = require("express");
+const express = require('express');
+const cors = require('cors');
 const app = express();
 const jwt = require("jsonwebtoken");
+
+
+// Enable CORS for all routes
+app.use(cors());
+
+
 app.use(express.json());
 
 const users = [
     {
         id: "1",
-        username: "john",
-        password: "John0908",
+        username: "ayoub",
+        password: "pass",
         isAdmin: true,
     },
     {
         id: "2",
-        username: "jane",
-        password: "Jane0908",
+        username: "amal",
+        password: "pass",
         isAdmin: false,
     },
 ];
 
 let refreshTokens = [];
 
-// app.post("/api/refresh", (req, res) => {
-//     //take the refresh token from the user
-//     const refreshToken = req.body.token;
+app.post("/api/refresh", (req, res) => {
+    //take the refresh token from the user
+    const refreshToken = req.body.token;
 
-//     //send error if there is no token or it's invalid
-//     if (!refreshToken) return res.status(401).json("You are not authenticated!");
-//     if (!refreshTokens.includes(refreshToken)) {
-//         return res.status(403).json("Refresh token is not valid!");
-//     }
-//     jwt.verify(refreshToken, "myRefreshSecretKey", (err, user) => {
-//         err && console.log(err);
-//         refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
+    //send error if there is no token or it's invalid
+    if (!refreshToken) return res.status(401).json("You are not authenticated!");
+    if (!refreshTokens.includes(refreshToken)) {
+        return res.status(403).json("Refresh token is not valid!");
+    }   
+    jwt.verify(refreshToken, "myRefreshSecretKey", (err, user) => {
+        err && console.log(err);
+        refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
+        const newAccessToken = generateAccessToken(user);
+        const newRefreshToken = generateRefreshToken(user);
 
-//         const newAccessToken = generateAccessToken(user);
-//         const newRefreshToken = generateRefreshToken(user);
+        refreshTokens.push(newRefreshToken);
 
-//         refreshTokens.push(newRefreshToken);
+        res.status(200).json({
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+        });
+    });
 
-//         res.status(200).json({
-//             accessToken: newAccessToken,
-//             refreshToken: newRefreshToken,
-//         });
-//     });
-
-//     //if everything is ok, create new access token, refresh token and send to user
-// });
+    //if everything is ok, create new access token, refresh token and send to user
+});
 
 const generateAccessToken = (user) => {
     return jwt.sign({ id: user.id, isAdmin: user.isAdmin }, "mySecretKey", {
-        expiresIn: "5s",
+        expiresIn: "20s",
     });
 };
 
 const generateRefreshToken = (user) => {
-    return jwt.sign({ id: user.id, isAdmin: user.isAdmin }, "mySecretKey");
+    return jwt.sign({ id: user.id, isAdmin: user.isAdmin }, "myRefreshSecretKey");
 };
 
 app.post("/api/login", (req, res) => {
     const { username, password } = req.body;
-    // res.json({msg:'hello nice ....'})
     const user = users.find((u) => {
         return u.username === username && u.password === password;
     });
-    // console.log(user)
-    // res.json(user);
     if (user) {
         //Generate an access token
         const accessToken = generateAccessToken(user);
@@ -91,6 +94,7 @@ const verify = (req, res, next) => {
             }
 
             req.user = user;
+            console.log(req.user)
             next();
         });
 
@@ -107,10 +111,10 @@ app.delete("/api/users/:userId", verify, (req, res) => {
     }
 });
 
-// app.post("/api/logout", verify, (req, res) => {
-//     const refreshToken = req.body.token;
-//     refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
-//     res.status(200).json("You logged out successfully.");
-// });
+app.post("/api/logout", verify, (req, res) => {
+    const refreshToken = req.body.token;
+    refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
+    res.status(200).json("You logged out successfully.");
+});
 
 app.listen(5000, () => console.log("Backend server is running! on  http://localhost:5000 ...."));
