@@ -24,22 +24,46 @@ function App() {
     }
   };
 
-  const axiosJWT = axios.create()
+//-------------------------------------------------------------------------------------------------------------//
+  // Create a new instance of the Axios HTTP client
+  const axiosJWT = axios.create();
 
+  // Attach an interceptor function to the 'request' method of the Axios instance
   axiosJWT.interceptors.request.use(
+
+    // The first argument is a callback function that modifies the request configuration
     async (config) => {
+
+      // Get the current date
       let currentDate = new Date();
+
+      // Decode the JWT token stored in the user object
       const decodedToken = jwt_decode(user.accessToken);
+      console.log('5555555555555555555555555555555')
+      console.log(decodedToken)
+
+      // Check if the token has expired by comparing the expiration time to the current time
       if (decodedToken.exp * 1000 < currentDate.getTime()) {
+
+        // If the token has expired, call the 'refreshToken()' function to get a new access token
         const data = await refreshToken();
+
+        // Set the 'authorization' header of the request with the new access token
         config.headers["authorization"] = "Bearer " + data.accessToken;
       }
+
+      // Return the modified request configuration
       return config;
     },
+
+    // The second argument is a callback function that handles errors
     (error) => {
+
+      // Reject the request with the error object
       return Promise.reject(error);
     }
   );
+//-------------------------------------------------------------------------------------------------------------//
 
   const handleSubmit = async (e) => {
     e.preventDefault();
